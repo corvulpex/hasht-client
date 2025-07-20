@@ -1,6 +1,7 @@
+#ifndef INTERFACE_H
+#define INTERFACE_H
+
 #include <chrono>
-#include <iostream>
-#include <numeric>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -13,7 +14,7 @@ typedef enum {
     INSERT,
     REMOVE,
     GET
-} OP_Type;
+} OP_TYPE;
 
 typedef enum {
     EMPTY,
@@ -24,88 +25,91 @@ typedef enum {
 
 template <typename K, typename T>
 struct Operation {
-    std::mutex lock;
-    OP_Type type;
+    OP_TYPE type;
     OP_STATUS status;
     K key;
     std::optional<T> value;
 };
 
 template <typename K, typename T>
-struct shmem {
-    Operation<K, T> op_ports[];
+struct SH_MEM {
+	size_t ret_tail;
+	size_t op_tail;
+	size_t op_head;
+	std::mutex tail_lock;
+	std::mutex head_lock;
+	Operation<K, T> op_ports[];
 };
 
 
 template <typename K, typename T>
-class Interface {
+class HashtInterface {
 	size_t port_count;
-	Operation<K, T> *ports;
+	SH_MEM<K, T> *sh_mem;
 
 
 public:
-	Interface(const char* mem_name, size_t port_count, size_t port_offset=0) {
+	HashtInterface(const char* mem_name, size_t port_count) {
 		this->port_count = port_count;
 
 		int shmem = shm_open(mem_name, O_RDWR, 0666);
-		ftruncate(shmem, sizeof(Operation<K, T>) * (port_count + port_offset));
-		ports = (Operation<K, T> *) mmap(0, sizeof(Operation<K, T>) * port_count, PROT_READ | PROT_WRITE, MAP_SHARED, shmem, sizeof(Operation<K, T>) * port_offset);
+		ftruncate(shmem, sizeof(Operation<K, T>) * port_count + sizeof(size_t) * 3 + sizeof(std::mutex) * 2);
+		sh_mem = (SH_MEM<K, T> *) mmap(0, sizeof(Operation<K, T>) * port_count + sizeof(size_t) * 3 + sizeof(std::mutex) * 2, PROT_READ | PROT_WRITE, MAP_SHARED, shmem, 0); 
 	}
 
+	std::optional<size_t> queue_operation(Operation<K, T> op) {
+		if ((sh_mem->op_head + 1) % port_count == sh_mem->ret_tail)
+			return {};
 
-	bool insert(K key, T value, size_t port = 0) {
-		if (ports[port].status != EMPTY)
-			return false;
-	
-		std::unique_lock<std::mutex> lock(ports[port].lock);
-		if(ports[port].status != EMPTY)
-			return false;
-	
-		ports[port].type = INSERT;
-		ports[port].key = key;
-		ports[port].value = value;
-		ports[port].status = INCOMING;
-		return true;
+		std::unique_lock<std::mutex> lock(sh_mem->head_lock);
+		if ((sh_mem->op_head + 1) % port_count == sh_mem->ret_tail)
+			return {};
+
+		size_t port = sh_mem->op_head;
+		sh_mem->op_ports[port] = op;
+		sh_mem->op_head++;
+		return port;
 	}
 
-	bool remove(K key, size_t port = 0) {
-		if (ports[port].status != EMPTY)
-			return false;
-
-		std::unique_lock<std::mutex> lock(ports[port].lock);
-		if(ports[port].status != EMPTY)
-			return false;
-	
-		ports[port].type = REMOVE;
-		ports[port].key = key;
-		ports[port].status = INCOMING;
-		return true;
+	bool insert(K key, T value) {
+		Operation<K, T> op = {
+			.type = INSERT,
+			.status	= INCOMING,
+			.key = key,
+			.value = value,
+		};
+		return queue_operation(op).has_value();
 	}
 
-	bool get(K key, std::optional<T> *value, size_t port = 0) {
-		if (ports[port].status != EMPTY)
-			return false;
+	bool remove(K key) {
+		Operation<K, T> op = {
+			.type = REMOVE,
+			.status	= INCOMING,
+			.key = key
+		};
+		return queue_operation(op).has_value();
+	}
 
-		std::unique_lock<std::mutex> lock(ports[port].lock);
-		if(ports[port].status != EMPTY)
-			return false;
-	
-		ports[port].type = GET;
-		ports[port].key = key;
-		ports[port].status = INCOMING;
-	
-		lock.unlock();
+	bool get(K key, std::optional<T> *value) {
+		Operation<K, T> op = {
+			.type = GET,
+			.status	= INCOMING,
+			.key = key
+		};
+		std::optional<size_t> port;
+		if (!(port = queue_operation(op).has_value()))
+	  		return false;
 
-		while (ports[port].status != FINISHED)
+		while (sh_mem->op_ports[port.value()].status != FINISHED) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		}
 
-		lock.lock();
-		if (ports[port].status != FINISHED)
-			return false;
-
-		*value = ports[port].value;
-		ports[port].status = EMPTY;
+		std::optional<T> val = sh_mem->op_ports[port.value()].value;
+		sh_mem->op_ports[port.value()].status = EMPTY;
+		*value = val;
 		return true;
 	}
 };
 
+
+#endif
