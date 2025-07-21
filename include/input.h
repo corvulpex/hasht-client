@@ -1,12 +1,13 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+#include "interface.h"
+
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <sstream>
 #include <string>
-#include "interface.h"
 
 template <typename K, typename T>
 class InputHandler {
@@ -24,7 +25,7 @@ public:
 		value_to_string = value_to_string_func;
 	};
 
-	bool parse_input(char &command, K &key, T &value) {
+	bool parse_input(char *command, K *key, T *value) {
 		std::string input_line;
 		std::getline(std::cin, input_line);
 		
@@ -49,11 +50,11 @@ public:
 			return false;
 		}
 
-		command = cmd[0];
+		*command = cmd[0];
 		if (kp)
-			key = kp.value();
+			*key = kp.value();
 		if(vp)
-			value = vp.value();
+			*value = vp.value();
 		return true;
 	}
 
@@ -63,7 +64,7 @@ public:
 			K key;
 			T value;
 
-			if (!parse_input(c, key, value))
+			if (!parse_input(&c, &key, &value))
 				continue;
 			
 			switch (c) {

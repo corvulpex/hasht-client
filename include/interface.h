@@ -1,7 +1,10 @@
 #ifndef INTERFACE_H
 #define INTERFACE_H
 
+#include "shared_mem.h"
+
 #include <chrono>
+#include <iostream>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -9,37 +12,6 @@
 #include <unistd.h>
 #include <mutex>
 #include <optional>
-
-typedef enum {
-    INSERT,
-    REMOVE,
-    GET
-} OP_TYPE;
-
-typedef enum {
-    EMPTY,
-    INCOMING,
-    FINISHED,
-    ERROR
-} OP_STATUS;
-
-template <typename K, typename T>
-struct Operation {
-    OP_TYPE type;
-    OP_STATUS status;
-    K key;
-    std::optional<T> value;
-};
-
-template <typename K, typename T>
-struct SH_MEM {
-	size_t ret_tail;
-	size_t op_tail;
-	size_t op_head;
-	std::mutex tail_lock;
-	std::mutex head_lock;
-	Operation<K, T> op_ports[];
-};
 
 
 template <typename K, typename T>
@@ -97,7 +69,8 @@ public:
 			.key = key
 		};
 		std::optional<size_t> port;
-		if (!(port = queue_operation(op).has_value()))
+		port = queue_operation(op);
+		if (!port)
 	  		return false;
 
 		while (sh_mem->op_ports[port.value()].status != FINISHED) {
