@@ -3,8 +3,11 @@
 
 #include "shared_mem.h"
 
+#include <cerrno>
 #include <chrono>
+#include <cstring>
 #include <iostream>
+#include <stdexcept>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -16,17 +19,48 @@
 
 template <typename K, typename T>
 class HashtInterface {
+	const char* mem_name;
 	size_t port_count;
 	SH_MEM<K, T> *sh_mem;
 
 
 public:
 	HashtInterface(const char* mem_name, size_t port_count) {
+		this->mem_name = mem_name;
 		this->port_count = port_count;
 
 		int shmem = shm_open(mem_name, O_RDWR, 0666);
-		ftruncate(shmem, sizeof(Operation<K, T>) * port_count + sizeof(size_t) * 3 + sizeof(std::mutex) * 2);
-		sh_mem = (SH_MEM<K, T> *) mmap(0, sizeof(Operation<K, T>) * port_count + sizeof(size_t) * 3 + sizeof(std::mutex) * 2, PROT_READ | PROT_WRITE, MAP_SHARED, shmem, 0); 
+		if (!shmem) {
+			std::cerr << "Opening shared memory failed: " << strerror(errno) << "\n";
+			throw std::runtime_error("");
+		}
+		if (ftruncate(shmem, shared_mem_size<K, T>(port_count))) {
+			std::cerr << "Ftruncate failed: " << strerror(errno) << "\n";
+			if (shm_unlink(mem_name) == -1) {
+				std::cerr << "Could not unlink shared memory correctly: " << strerror(errno) << "\n";
+			};
+			throw std::runtime_error("");
+		};
+		
+		sh_mem = (SH_MEM<K, T> *) mmap(0, shared_mem_size<K, T>(port_count), PROT_READ | PROT_WRITE, MAP_SHARED, shmem, 0); 
+
+		if (sh_mem == MAP_FAILED) {
+			std::cerr << "Mmap failed: " << strerror(errno) << "\n";
+			if (shm_unlink(mem_name) == -1) {
+				std::cerr << "Could not unlink shared memory correctly: " << strerror(errno) << "\n";
+			};
+			throw std::runtime_error("");
+		}
+	}
+
+	~HashtInterface() {
+		if(shm_unlink(mem_name) == -1) {
+			std::cerr << "Could not unlink shared memory correctly: " << strerror(errno) << "\n";
+		}
+		if (munmap(sh_mem, shared_mem_size<K, T>(port_count)) == -1) {
+			std::cerr << "Could not unmap shared memory correctly: " << strerror(errno) << "\n";
+		}
+
 	}
 
 	std::optional<size_t> queue_operation(Operation<K, T> op) {
