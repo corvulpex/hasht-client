@@ -54,3 +54,6 @@ This will fetch the value with key 4 and print it to std::cout.
 
 To quit simply in input 'q'.
 
+## Notes
+
+This specific implementation lets you insert <int, int> pairs into the hashmap. The underlying logic is capable of using arbitrary types of a fixed length if there is a implementation for std::hash on the server side.
