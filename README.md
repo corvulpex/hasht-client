@@ -26,6 +26,8 @@ Optionally you can change the number of requests that can be queued at the same 
 
 ### Using the running client
 
+After starting the server side you can use the client.
+
 There are 3 operations that can be performed on the hashmap.
 
 #### Insert
