@@ -30,18 +30,20 @@ There are 3 operations that can be performed on the hashmap.
 
 #### Insert
 
-This will insert the value 1337 with key 4.
 ```
 i 4 1337
 ```
+This will insert the value 1337 with key 4.
 
 #### Remove 
+
 ```
 r 4 
 ```
 This will remove the value with key 4.
 
 #### Get
+
 ```
 g 4 
 ```
