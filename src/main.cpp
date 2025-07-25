@@ -22,6 +22,7 @@ std::optional<int> my_string_to_int(std::string s) {
 
 void print_help() {
 	std::cout << "Hasht-Client usage:\n";
+	std::cout << "Start the server first\n";
 	std::cout << "Start the client by supplying the name of the shared memory object:\n";
 	std::cout << "	./hasht-client [shared_mem_name]\n";
 	std::cout << "Optionally add number of request queue slots (must be the same for the server!!!):\n";

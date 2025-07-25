@@ -10,6 +10,8 @@ Note that this program relies on POSIX functionality, so it won't build on Windo
 
 ## How to use
 
+First start the server program.
+
 ### Starting the client
 
 Start the client by providing the name of the shared memory object (the same as for the server).
