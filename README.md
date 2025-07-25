@@ -54,7 +54,7 @@ g 4
 This will fetch the value with key 4 and print it to std::cout.
 
 
-To quit simply in input 'q'.
+To quit simply input 'q'.
 
 ## Notes
 
