@@ -17,11 +17,26 @@ std::optional<int> my_string_to_int(std::string s) {
 	catch (std::invalid_argument const &ex) {
 		return {};
 	}
-	return std::optional<int>(i);
+	return i;
 }
 
 void print_help() {
-	std::cout << "You're on your own for now\n";
+	std::cout << "Hasht-Client usage:\n";
+	std::cout << "Start the client by supplying the name of the shared memory object:\n";
+	std::cout << "	./hasht-client [shared_mem_name]\n";
+	std::cout << "Optionally add number of request queue slots (must be the same for the server!!!):\n";
+	std::cout << "	./hasht-client [shared_mem_name] [number_of_queue_slots]\n";
+	std::cout << "\n";
+	std::cout << "Input values:\n";
+	std::cout << "	i [key] [value]\n";
+	std::cout << "Remove values:\n";
+	std::cout << "	r [key]\n";
+	std::cout << "Get values:\n";
+	std::cout << "	g [key]\n";
+	std::cout << "Quit client:\n";
+	std::cout << "	q\n";
+	std::cout << "\n";
+	std::cout << "You can input <int, int> value pairs\n";
 }
 
 

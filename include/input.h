@@ -81,18 +81,23 @@ public:
 						std::cout << "Action failed\n";
 					break;
 
-				case 'g':
-					std::optional<T> ret_val;
-					if (!interface->get(key, &ret_val)) {
-						std::cout << "Action failed\n";
+				case 'g': {
+						std::optional<T> ret_val;
+						if (!interface->get(key, &ret_val)) {
+							std::cout << "Action failed\n";
+							break;
+						};
+						if (ret_val) {
+							std::cout << "Value: " << value_to_string(ret_val.value()) << "\n";
+						}
+						else {
+							std::cout << "No value found\n";
+						}
 						break;
-					};
-					if (ret_val) {
-						std::cout << "Value: " << value_to_string(ret_val.value()) << "\n";
-					} 
-					else {
-						std::cout << "No value found\n";
 					}
+
+				default:
+					std::cout << "Unknown commmand\n";
 					break;
 			}
 
