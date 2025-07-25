@@ -11,5 +11,7 @@ all: $(TARGET)
 $(TARGET): $(SRCS)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRCS) -I $(INCLUDE)
 
+.PHONY: $(TARGET) clean
+
 clean:
 	rm -f $(TARGET)
