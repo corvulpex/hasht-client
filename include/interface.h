@@ -73,7 +73,7 @@ public:
 
 		size_t port = sh_mem->op_head;
 		sh_mem->op_ports[port] = op;
-		sh_mem->op_head++;
+		sh_mem->op_head = (sh_mem->op_head + 1) % port_count;
 		return port;
 	}
 
@@ -102,8 +102,8 @@ public:
 			.status	= INCOMING,
 			.key = key
 		};
-		std::optional<size_t> port;
-		port = queue_operation(op);
+
+		std::optional<size_t> port = queue_operation(op);
 		if (!port)
 	  		return false;
 
